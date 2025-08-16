@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ashok Free 123 — Official Site</title>
+  <meta name="description" content="Ashok Free 123 — Official portfolio and video hub showcasing latest YouTube videos and shorts.">
+  <meta name="keywords" content="Ashok Free 123, AshokFREE123, YouTube, Free Fire, shorts, gaming">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#0f1115; color:#e7e9ea; }
+    header { padding: 28px 16px; text-align:center; background:#12141a; position:sticky; top:0; z-index:10; border-bottom:1px solid #1f232c;}
+    h1 { margin:0; font-size: clamp(26px, 4vw, 40px); letter-spacing: 0.5px; }
+    .tagline { opacity:0.8; margin-top:6px; font-size:14px; }
+    .container { width: min(1100px, 92%); margin: 24px auto; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap:16px; }
+    .card { background:#141822; padding:12px; border-radius:16px; border:1px solid #222838; box-shadow:0 6px 20px rgba(0,0,0,.25); }
+    .thumb { width:100%; border-radius:12px; display:block; }
+    .title { margin:8px 0 0; font-size:14px; line-height:1.35; }
+    a.link { text-decoration:none; color:#76a2ff; font-weight:600; }
+    .section-title { margin: 28px 0 12px; font-size: 20px; }
+    .channel-embed { aspect-ratio:16/9; width:100%; border:0; border-radius:16px; }
+    footer { text-align:center; opacity:0.7; padding:24px; font-size:13px; }
+    .inputs { display:flex; gap:8px; flex-wrap:wrap; margin: 12px 0 20px; }
+    .inputs input { flex:1 1 260px; padding:10px 12px; background:#0d0f14; border:1px solid #222838; border-radius:12px; color:#e7e9ea; }
+    .inputs button { padding:10px 16px; border:0; background:#3b82f6; color:#fff; border-radius:12px; font-weight:700; cursor:pointer; }
+    .notice { font-size: 12px; opacity: .75; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔥 Ashok Free 123</h1>
+    <div class="tagline">Official Website — Gaming • Shorts • Video Enhancing</div>
+  </header>
+
+  <main class="container">
+    <section>
+      <h2 class="section-title">Your YouTube Channel</h2>
+      <!-- Replace the URL below with your channel URL if you want a direct embed -->
+      <iframe class="channel-embed" src="https://www.youtube.com/embed?listType=user_uploads&list=CHANNEL_USERNAME" allowfullscreen></iframe>
+      <div class="notice">Tip: ऊपर वाले embed में <b>CHANNEL_USERNAME</b> को अपने चैनल के username से बदलें (जैसे @ASHOKFREE123 हटाकर केवल username दें)।</div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Latest Videos & Shorts (Auto)</h2>
+
+      <div class="inputs">
+        <input id="apiKey" placeholder="Enter YOUR YouTube API Key" />
+        <input id="channelId" placeholder="Enter YOUR Channel ID (starts with UC...)" />
+        <button id="loadBtn">Load Videos</button>
+      </div>
+
+      <div id="videos" class="grid" aria-live="polite"></div>
+      <div id="status" class="notice"></div>
+    </section>
+  </main>
+
+  <footer>© <span id="year"></span> Ashok Free 123 — All rights reserved.</footer>
+
+  <script>
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const statusEl = document.getElementById('status');
+    const videosEl = document.getElementById('videos');
+
+    async function fetchUploadsPlaylistId(apiKey, channelId) {
+      // Get the "uploads" playlist ID for the channel (more reliable for both videos and shorts)
+      const url = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.items || !data.items.length) throw new Error('Invalid Channel ID or API Key.');
+      return data.items[0].contentDetails.relatedPlaylists.uploads;
+    }
+
+    async function fetchPlaylistItems(apiKey, playlistId, maxResults = 24) {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=${maxResults}&key=${apiKey}`;
+      const res = await fetch(url);
+      return await res.json();
+    }
+
+    function renderVideos(items) {
+      videosEl.innerHTML = '';
+      items.forEach(item => {
+        const sn = item.snippet;
+        if (!sn || !sn.resourceId || !sn.resourceId.videoId) return;
+        const vid = sn.resourceId.videoId;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <a class="link" href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener">
+            <img class="thumb" src="${sn.thumbnails && (sn.thumbnails.maxres?.url || sn.thumbnails.high?.url || sn.thumbnails.medium?.url || sn.thumbnails.default?.url) || ''}" alt="${sn.title.replace(/"/g,'&quot;')}">
+            <div class="title">${sn.title}</div>
+          </a>
+        `;
+        videosEl.appendChild(card);
+      });
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+      const apiKey = document.getElementById('apiKey').value.trim();
+      const channelId = document.getElementById('channelId').value.trim();
+      if (!apiKey || !channelId) {
+        statusEl.textContent = 'Please enter your API Key and Channel ID.';
+        return;
+      }
+      statusEl.textContent = 'Loading...';
+      try {
+        const uploadsId = await fetchUploadsPlaylistId(apiKey, channelId);
+        const data = await fetchPlaylistItems(apiKey, uploadsId, 24);
+        if (!data.items) throw new Error('No items found.');
+        renderVideos(data.items);
+        statusEl.textContent = `Loaded ${data.items.length} videos from your channel.`;
+      } catch (e) {
+        statusEl.textContent = 'Error: ' + e.message;
+      }
+    });
+  </script>
+</body>
+</html>
